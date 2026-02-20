@@ -41,7 +41,7 @@
 │  3. Inject `token` header into proxied request                       │
 │  4. Forward to OpenIM REST API                                       │
 │                                                                      │
-│  ⚠️ WebSocket is handled differently — see Section 3                 │
+│  ⚠️  WebSocket is handled differently — see Section 3                │
 └────────────┬─────────────────────────────┬───────────────────────────┘
              │ REST                        │ WebSocket (special path)
 ┌────────────▼────────────┐   ┌────────────▼──────────────────────────┐
@@ -1162,7 +1162,7 @@ volumes:
 
 | Area | Who | Key Tasks |
 |---|---|---|
-| **Gateway & Middleware** | Adam | DH session verification, JWT middleware, Redis imToken injection, reverse proxy setup |
+| **Gateway & Middleware** | Backend lead | DH session verification, JWT middleware, Redis imToken injection, reverse proxy setup |
 | **Auth Handlers** | Backend | Device registration, OTP flow, OpenIM user creation, token minting |
 | **Admin Handlers** | Backend | All `/api/v1/admin/*` routes — users, messages, groups, stickers |
 | **OpenIM Client** | Backend | `openim.Client` wrapper, admin token caching, all OpenIM API calls |
@@ -1201,6 +1201,6 @@ volumes:
 
 > ⚠️ **Reminder:** Every OpenIM API call requires a unique `operationID` header per request. The gateway middleware sets this automatically for all proxied mobile requests. For direct calls from your admin handlers, always use the `openimClient.post()` helper which generates it internally.
 
-- Full API docs: [https://docs.openim.io/restapi](https://docs.openim.io/restapi)
-- OpenIM Docker repo: [https://github.com/openimsdk/openim-docker](https://github.com/openimsdk/openim-docker)
-- OpenIM SDK (React Native): [https://github.com/openimsdk/open-im-sdk-reactnative](https://github.com/openimsdk/open-im-sdk-reactnative)
+Full API docs: [https://docs.openim.io/restapi](https://docs.openim.io/restapi)
+OpenIM Docker repo: [https://github.com/openimsdk/openim-docker](https://github.com/openimsdk/openim-docker)
+OpenIM SDK (React Native): [https://github.com/openimsdk/open-im-sdk-reactnative](https://github.com/openimsdk/open-im-sdk-reactnative)
