@@ -20,6 +20,8 @@
 10. [Environment & Deployment](#10-environment--deployment)
 11. [Team Responsibilities](#11-team-responsibilities)
 
+**See also:** [README.md](./README.md) and the [sections/](./sections/) folder for the **migration plan** from the current chat app to this OpenIM-based design. The sections map current behavior to OpenIM and give a phased implementation order (see [sections/00-INDEX.md](./sections/00-INDEX.md) and [sections/08-migration-phases.md](./sections/08-migration-phases.md)).
+
 ---
 
 ## 1. Architecture Overview
