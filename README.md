@@ -18,6 +18,8 @@ This directory contains the **implementation plan** for moving the current chat 
 | **[sections/06-admin-and-moderation.md](./sections/06-admin-and-moderation.md)** | Current admin routes vs OpenIM admin API and webhooks. |
 | **[sections/07-data-and-storage.md](./sections/07-data-and-storage.md)** | Current data stores (Mongo, Postgres, Redis) vs what OpenIM owns and what we keep. |
 | **[sections/08-migration-phases.md](./sections/08-migration-phases.md)** | Phased migration plan: order of work and dependencies. |
+| **[diagram/current-flow.md](./diagram/current-flow.md)** | Mermaid diagrams: current component flow, message send sequence, presence & WebSocket. |
+| **[diagram/openim-integration-flow.md](./diagram/openim-integration-flow.md)** | Mermaid diagrams: OpenIM component flow, login/imToken, message send, admin & webhooks. |
 
 ---
 
