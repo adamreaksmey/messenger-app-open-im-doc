@@ -7,53 +7,46 @@ Diagrams for the **current** chat application (before OpenIM). See [sections/01-
 ## 1. Component & Request Flow
 
 ```mermaid
-flowchart TB
-    subgraph clients["Client Layer"]
-        Mobile["Mobile / Web Client"]
-    end
+sequenceDiagram
+    autonumber
+    %% Participants
+    participant Mobile as Mobile / Web Client
+    participant Auth as Verify Auth (JWT or HMAC)
+    participant Route as Route by prefix (/admin | /user | /chat)
+    participant UserSvc as User Service (auth, profile, sessions)
+    participant ChatSvc as Chat Service (messages, conversations, groups)
+    participant AdminSvc as Admin Service
+    participant Redis as Redis (sessions, presence, notify channel)
+    participant Postgres as PostgreSQL (conversations, groups, users)
+    participant Mongo as MongoDB (messages)
+    participant RabbitMQ as RabbitMQ (chat.message.notify, notification.push)
+    participant WS as WebSocket Service (NestJS / Socket.IO)
 
-    subgraph gateway["Gateway (Go/Gin)"]
-        Auth["Verify Auth\n(JWT or HMAC)"]
-        Route["Route by prefix\n/admin | /user | /chat"]
-    end
+    %% Auth & routing
+    Mobile->>Auth: Request
+    Auth->>Route: Route by prefix
+    Route->>UserSvc: /user requests
+    Route->>ChatSvc: /chat requests
+    Route->>AdminSvc: /admin requests
 
-    subgraph backends["Backend Services"]
-        UserSvc["User Service\n(auth, profile, sessions)"]
-        ChatSvc["Chat Service\n(messages, conversations, groups)"]
-        AdminSvc["Admin Service"]
-    end
+    %% User service data access
+    UserSvc->>Redis: sessions, presence
+    UserSvc->>Postgres: users, profiles
 
-    subgraph data["Data Layer"]
-        Redis["Redis\n(sessions, presence, notify channel)"]
-        Postgres["PostgreSQL\n(conversations, groups, users)"]
-        Mongo["MongoDB\n(messages)"]
-        RabbitMQ["RabbitMQ\n(chat.message.notify\nnotification.push)"]
-    end
+    %% Chat service data access
+    ChatSvc->>Mongo: messages
+    ChatSvc->>Postgres: conversations, groups
+    ChatSvc->>RabbitMQ: chat.message.notify
+    ChatSvc->>Redis: publish if online
 
-    subgraph ws["Realtime"]
-        WS["WebSocket Service\n(NestJS / Socket.IO)"]
-    end
+    %% RabbitMQ consumption
+    RabbitMQ->>ChatSvc: consumer
 
-    Mobile --> Auth
-    Auth --> Route
-    Route --> UserSvc
-    Route --> ChatSvc
-    Route --> AdminSvc
-
-    UserSvc --> Redis
-    UserSvc --> Postgres
-    ChatSvc --> Mongo
-    ChatSvc --> Postgres
-    ChatSvc --> RabbitMQ
-    ChatSvc --> Redis
-
-    RabbitMQ -->|"consumer"| ChatSvc
-    ChatSvc -->|"publish if online"| Redis
-    Redis -->|"subscribe"| WS
-    WS --> Mobile
-
-    Mobile -->|"Socket.IO /ws-app\nuserId + sessionId"| WS
-    WS --> Redis
+    %% Real-time notifications
+    Redis->>WS: subscribe
+    WS->>Mobile: notify
+    Mobile->>WS: Socket.IO /ws-app (userId + sessionId)
+    WS->>Redis: presence updates
 ```
 
 ---
@@ -100,26 +93,21 @@ sequenceDiagram
 ## 3. Presence & WebSocket
 
 ```mermaid
-flowchart LR
-    subgraph client_ws["Client"]
-        App["App"]
-    end
+sequenceDiagram
+    autonumber
+    %% Participants
+    participant App as App (Client)
+    participant Socket as Socket.IO Service (/ws-app)
+    participant Presence as PresenceService
+    participant UserKey as Redis Key: presence:user:{userId} → socketIds
+    participant SocketKey as Redis Key: presence:socket:{socketId} → userId
 
-    subgraph ws_svc["WebSocket Service"]
-        Socket["Socket.IO\n/ws-app"]
-        Presence["PresenceService"]
-    end
-
-    subgraph redis_presence["Redis"]
-        UserKey["presence:user:{userId}\n→ socketIds"]
-        SocketKey["presence:socket:{socketId}\n→ userId"]
-    end
-
-    App -->|"connect auth: userId, sessionId"| Socket
-    Socket -->|"add"| Presence
-    Presence --> UserKey
-    Presence --> SocketKey
-    Socket -->|"join room: user:userId"| Socket
+    %% Connection flow
+    App->>Socket: connect (auth: userId, sessionId)
+    Socket->>Presence: add connection
+    Presence->>UserKey: map userId → socketIds
+    Presence->>SocketKey: map socketId → userId
+    Socket->>Socket: join room: user:userId
 ```
 
 ---

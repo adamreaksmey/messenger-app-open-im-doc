@@ -20,6 +20,7 @@ This directory contains the **implementation plan** for moving the current chat 
 | **[sections/08-migration-phases.md](./sections/08-migration-phases.md)** | Phased migration plan: order of work and dependencies. |
 | **[diagram/current-flow.md](./diagram/current-flow.md)** | Mermaid diagrams: current component flow, message send sequence, presence & WebSocket. |
 | **[diagram/openim-integration-flow.md](./diagram/openim-integration-flow.md)** | Mermaid diagrams: OpenIM component flow, login/imToken, message send, admin & webhooks. |
+| **[common-issues/README.md](./common-issues/README.md)** | First-time OpenIM: list of problems, gotchas, and things to watch for (with [gotchas-and-issues.md](./common-issues/gotchas-and-issues.md)). |
 
 ---
 

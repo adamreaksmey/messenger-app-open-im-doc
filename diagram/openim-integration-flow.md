@@ -7,51 +7,50 @@ Diagrams for the **target** architecture with OpenIM. See [implementation-doc.md
 ## 1. Component & Two Paths (REST vs WebSocket)
 
 ```mermaid
-flowchart TB
-    subgraph clients["Client Layer"]
-        Mobile["Mobile / Web\n(sessionId for REST)\n(imToken for WS only)"]
-        Admin["Admin Dashboard\n(JWT)"]
-    end
+sequenceDiagram
+    autonumber
+    %% Participants
+    participant Mobile as Mobile / Web (sessionId for REST, imToken for WS only)
+    participant Admin as Admin Dashboard (JWT)
+    participant Gateway as Your Gateway (Go/Gin)
+    participant Auth as Verify Auth (HMAC or JWT)
+    participant Resolve as Resolve imToken (Redis im:token:userID)
+    participant Inject as Inject token + operationID (Strip our headers)
+    participant Proxy as Proxy to OpenIM REST
+    participant UserSvc as User Service (device, OTP, profile)
+    participant Login as Login / OTP verify → register user in OpenIM → mint imToken → Redis
+    participant Webhook as Webhook receiver (/moderation, analytics)
+    participant OpenIMREST as OpenIM REST API (msg, group, user, auth)
+    participant OpenIMWS as OpenIM WebSocket (port 10001)
+    participant OpenIMAdmin as OpenIM Admin API (force_logout, get_msgs, etc.)
+    participant Redis as Redis (sessions, im:token:userID)
+    participant PG as PostgreSQL (your users, devices)
 
-    subgraph gateway["Your Gateway (Go/Gin)"]
-        Auth["Verify Auth\nHMAC or JWT"]
-        Resolve["Resolve imToken\nRedis im:token:userID"]
-        Inject["Inject token + operationID\nStrip our headers"]
-        Proxy["Proxy to OpenIM REST"]
-    end
+    %% REST flow
+    Mobile->>Auth: REST: Session + HMAC
+    Auth->>Resolve: Verify token
+    Resolve->>Redis: Fetch imToken
+    Resolve->>Inject: Pass token
+    Inject->>Proxy: Forward with operationID
+    Proxy->>OpenIMREST: Proxy REST requests
 
-    subgraph your_backend["Your Backend"]
-        UserSvc["User Service\n(device, OTP, profile)"]
-        Login["Login / OTP verify\n→ register user in OpenIM\n→ mint imToken → Redis"]
-        Webhook["Webhook receiver\n/moderation, analytics"]
-    end
+    %% WS flow
+    Mobile->>OpenIMWS: WS: imToken only (direct, no gateway)
 
-    subgraph openim["OpenIM Server"]
-        OpenIMREST["REST API\n(msg, group, user, auth)"]
-        OpenIMWS["WebSocket\n(port 10001)"]
-        OpenIMAdmin["Admin API\n(force_logout, get_msgs, etc.)"]
-    end
+    %% Admin flow
+    Admin->>Auth: JWT auth
+    Auth->>UserSvc: Validate admin
+    UserSvc->>PG: Query user/device info
 
-    subgraph data["Data"]
-        Redis["Redis\n(sessions, im:token:userID)"]
-        PG["PostgreSQL\n(your users, devices)"]
-    end
+    %% Login flow
+    Login->>OpenIMREST: Register user / Verify OTP
+    Login->>Redis: Store imToken
 
-    Mobile -->|"REST: Session + HMAC"| Auth
-    Auth --> Resolve
-    Resolve --> Redis
-    Resolve --> Inject
-    Inject --> Proxy
-    Proxy --> OpenIMREST
+    %% Webhook flow
+    OpenIMREST->>Webhook: Webhooks (moderation, analytics)
 
-    Mobile -->|"WS: imToken only\n(direct, no gateway)"| OpenIMWS
-    Admin --> Auth
-    Auth --> UserSvc
-    UserSvc --> PG
-    Login --> OpenIMREST
-    Login --> Redis
-    OpenIMREST -->|"webhooks"| Webhook
-    UserSvc -->|"admin actions"| OpenIMAdmin
+    %% Admin actions
+    UserSvc->>OpenIMAdmin: Perform admin actions
 ```
 
 ---
@@ -108,24 +107,23 @@ sequenceDiagram
 ## 4. Admin & Webhooks
 
 ```mermaid
-flowchart LR
-    subgraph admin_flow["Admin Flow"]
-        AdminUI["Admin Dashboard"]
-        YourAPI["Your Backend API"]
-        OpenIMAdmin["OpenIM Admin API"]
-    end
+sequenceDiagram
+    autonumber
+    %% Participants
+    participant AdminUI as Admin Dashboard
+    participant YourAPI as Your Backend API
+    participant OpenIMAdmin as OpenIM Admin API
+    participant OpenIMCore as OpenIM (message/group events)
+    participant Webhook as Your /webhooks/openim
 
-    subgraph webhook_flow["Webhook Flow"]
-        OpenIMCore["OpenIM (message/group events)"]
-        Webhook["Your /webhooks/openim"]
-    end
+    %% Admin flow
+    AdminUI->>YourAPI: JWT
+    YourAPI->>OpenIMAdmin: Admin token
+    OpenIMAdmin->>OpenIMAdmin: get_groups, del_msgs, force_logout, dismiss_group
 
-    AdminUI -->|"JWT"| YourAPI
-    YourAPI -->|"admin token"| OpenIMAdmin
-    OpenIMAdmin -->|"get_groups, del_msgs,\nforce_logout, dismiss_group"| OpenIMAdmin
-
-    OpenIMCore -->|"afterSendMsg,\nafterCreateGroup, ..."| Webhook
-    Webhook -->|"moderation, analytics"| YourAPI
+    %% Webhook flow
+    OpenIMCore->>Webhook: afterSendMsg, afterCreateGroup, ...
+    Webhook->>YourAPI: moderation, analytics
 ```
 
 ---
