@@ -65,3 +65,24 @@ So we **add** a webhook handler; we don’t replace our admin APIs with webhooks
 5. Keep reports and audit data in our DB; link to OpenIM IDs (user_id, group_id, conversation_id, message id) for reference.
 
 See [implementation-doc.md](../implementation-doc.md) §5 (webhooks), §7 (admin), and [07-data-and-storage.md](./07-data-and-storage.md) for what stays in our stores.
+
+---
+
+## Admin UI: Native/Built-in vs Wrapper (Decision Note)
+
+B hongly raised: *use OpenIM’s native/built-in admin where possible; a wrapper can add complexity and latency.*
+
+**Latency:** For an admin UI, one extra hop (Dashboard → our backend → OpenIM) is rarely the bottleneck. It only matters if responses are very slow (e.g. >2–3s). So latency alone is usually **not** a strong reason to avoid a wrapper.
+
+**Complexity:** A wrapper means we maintain endpoints that proxy or translate to the OpenIM admin API. The flip side: **we already need our own backend** for things OpenIM doesn’t own — ban user (our DB + Redis + `force_logout`), reports (our DB), media catalog, audit. So we can’t remove the backend; the choice is how much of “admin” goes through it.
+
+**Recommendation:**
+
+| Approach | When it fits |
+|----------|------------------|
+| **Use OpenIM’s built-in admin** (e.g. openim-admin at port 11002, or community UIs like opim_admin that talk to OpenIM) for **OpenIM-centric** tasks: browse messages, list groups, dismiss group, kick member, view OpenIM users. Then add a **small custom dashboard** (or a few pages in your app) only for **your** workflows: reports list, “ban user” (DB + Redis + force_logout), media catalog, audit. | You’re okay with two entry points (OpenIM admin + our dashboard). Less code to maintain; no wrapper for OpenIM-only operations. |
+| **Single custom dashboard (wrapper)** — your React (or other) UI talks only to your backend; your backend calls OpenIM admin API + your DB. One login (your JWT), one nav, one UX. | You want one unified, customized experience (branding, combined data, custom workflows). The extra hop is acceptable; complexity lives in one place and you have full control. |
+
+**Hybrid:** Use OpenIM’s native admin for quick/raw OpenIM operations (and for ops/monitoring if it includes Grafana etc.), and keep a **custom dashboard** for product/moderation (reports, ban, catalog, audit). That way you still avoid wrapping every OpenIM admin call in your backend, while having a tailored UI for “our” concerns.
+
+**Security note:** Don’t send the OpenIM **admin token** to the browser. If the custom UI needs to perform admin actions, those should go through your backend (which holds and caches the admin token and calls OpenIM server-side). So even with a “native” OpenIM UI for viewing, any custom actions that need the admin token should still go via your backend.

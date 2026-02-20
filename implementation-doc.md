@@ -864,6 +864,27 @@ func SearchGIFs(c *gin.Context) {
 }
 ```
 
+### 6.3 Why a Wrapper (Your Backend) Instead of Patching OpenIM
+
+When you need to **build on top** of OpenIM — for example, enriching messages with data from **your own DB** (e.g. a media table keyed by `media_id`, so the client gets full media URLs and metadata) — you have two options:
+
+- **Option A:** Add the feature **inside OpenIM’s code** (fork/patch: OpenIM calls your backend or DB to enrich before returning).
+- **Option B:** **Wrapper:** client calls **your** backend; your backend calls OpenIM, then enriches using **your DB** (no separate media service — straight DB access), and returns the combined result.
+
+We recommend **Option B (wrapper)**. Rationale:
+
+1. **Latency is small and bounded.** The wrapper adds one hop (client → your backend) and one DB read (your backend → your DB). With backend and DB in the same region, that’s typically tens of ms. For “fetch message list” or similar, that’s acceptable. You can optimize (caching, indexing) and still keep the wrapper.
+
+2. **Patching OpenIM doesn’t remove enrichment latency; it only moves it.** To attach your data (e.g. media URLs), *some* component must read from your DB. With the wrapper, your backend does it. With a patch, OpenIM would call your backend or DB. The RTT to your DB (or to a backend that talks to your DB) is similar either way. So Option A doesn’t eliminate latency — it just puts the dependency inside OpenIM’s code path.
+
+3. **Patching OpenIM is ongoing cost, not one-time.** You’re maintaining a fork. Every OpenIM upgrade requires re-applying or re-porting your change, re-testing, and re-deploying. That’s recurring effort. The wrapper stays in your codebase; OpenIM upgrades don’t touch it.
+
+4. **Failure and ownership.** With a patch, OpenIM’s message-fetch path depends on your backend or DB. If your DB is slow or down, OpenIM’s API can time out or fail. With the wrapper, *your* backend controls fallback (e.g. return messages without enriched media, or use cached data). Clear ownership: enrichment behavior lives in your service.
+
+5. **No separate media service.** Enrichment is “your backend → OpenIM API + your DB.” Your backend reads from your media table (or any other table) directly; no extra microservice required.
+
+**Summary:** For anything that needs your own data (message enrichment with media from your DB, custom admin queries, etc.), keep it in **your backend**: call OpenIM, then enrich from your DB and return. Avoid patching OpenIM so you don’t take on long-term fork maintenance and coupling.
+
 ---
 
 ## 7. Admin Dashboard
