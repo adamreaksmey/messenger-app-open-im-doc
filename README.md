@@ -8,6 +8,7 @@ This directory contains the **implementation plan** for moving the current chat 
 
 | Document | Purpose |
 |----------|---------|
+| **[build-on-top-strategy.md](./build-on-top-strategy.md)** | Decision paper: why we should **not modify OpenIM core** and how to implement a **wrapper-first** architecture on top of OpenIM. |
 | **[implementation-doc.md](./implementation-doc.md)** | Full OpenIM-based design: architecture, gateway, auth, WebSocket, admin, media, push, env, team responsibilities. **Reference for the target state.** |
 | **[sections/00-INDEX.md](./sections/00-INDEX.md)** | Section index, reading order, and critical path for migration. |
 | **[sections/01-current-architecture.md](./sections/01-current-architecture.md)** | Summary of the **current** app (gateway, chat service, websocket, user service) so we know what we're migrating. |
@@ -27,10 +28,11 @@ This directory contains the **implementation plan** for moving the current chat 
 
 ## How to Use
 
-1. **Target design:** Read [implementation-doc.md](./implementation-doc.md) to understand the desired OpenIM-based architecture.
-2. **Current state:** Read [sections/01-current-architecture.md](./sections/01-current-architecture.md) to see how the app works today.
-3. **Per concern:** Use the section files under `sections/` to see current → OpenIM mapping and implementation notes.
-4. **Execution order:** Follow [sections/00-INDEX.md](./sections/00-INDEX.md) and [sections/08-migration-phases.md](./sections/08-migration-phases.md) for the recommended migration path.
+1. **Architecture decision first:** Read [build-on-top-strategy.md](./build-on-top-strategy.md) for the argument and implementation stance: build on OpenIM, do not modify OpenIM core.
+2. **Target design:** Read [implementation-doc.md](./implementation-doc.md) to understand the desired OpenIM-based architecture.
+3. **Current state:** Read [sections/01-current-architecture.md](./sections/01-current-architecture.md) to see how the app works today.
+4. **Per concern:** Use the section files under `sections/` to see current → OpenIM mapping and implementation notes.
+5. **Execution order:** Follow [sections/00-INDEX.md](./sections/00-INDEX.md) and [sections/08-migration-phases.md](./sections/08-migration-phases.md) for the recommended migration path.
 
 ---
 

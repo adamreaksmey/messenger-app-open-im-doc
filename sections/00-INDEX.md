@@ -37,6 +37,7 @@ The root **[../implementation-doc.md](../implementation-doc.md)** is the **targe
 
 ## Cross-References
 
+- **Architecture decision (wrapper-first):** [../build-on-top-strategy.md](../build-on-top-strategy.md) — why we build on OpenIM instead of modifying core, with implementation guardrails.
 - **Wrapper vs OpenIM (where to implement):** [wrapper-vs-openim/README.md](../wrapper-vs-openim/README.md) — gateway kept as wrapper; in-openim vs as-wrapper split.
 - **Gateway & imToken:** implementation-doc §3; sections 02, 07.
 - **WebSocket:** implementation-doc §3 (WebSocket exception); sections 02, 03.

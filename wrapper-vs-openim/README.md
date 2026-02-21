@@ -4,6 +4,8 @@ This folder documents our **architecture decision**: what we implement **inside 
 
 **Starter preference:** We keep our **gateway separated and as a wrapper**. We do not fork OpenIM to put gateway logic inside it; we proxy and inject tokens from our own gateway.
 
+For the full decision argument and implementation guardrails, see [../build-on-top-strategy.md](../build-on-top-strategy.md).
+
 ---
 
 ## Documents
