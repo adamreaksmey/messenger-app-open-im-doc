@@ -83,6 +83,43 @@ That separation makes the system easier to understand, test, and maintain, and f
 
 ---
 
+## Risks of Modifying the Core
+
+### 1. Hidden Couplings and Fragility
+
+- OpenIM’s code is **highly interconnected**: a small change in one microservice can ripple into unexpected behavior elsewhere.
+- Even with infinite patience, you **cannot predict every side effect**, especially under load or in production.
+- Bugs introduced here might be subtle and extremely hard to trace—they won’t necessarily show up in dev or test environments.
+
+### 2. Upgrade and Security Risks
+
+- OpenIM actively fixes bugs and security vulnerabilities. If you’ve patched the core, **upgrading means either discarding your changes or merging them again**, which could:
+  - Accidentally undo security fixes.
+  - Reintroduce old bugs.
+  - Require re-auditing every security patch.
+- Time may be “irrelevant” now, but **security and compliance risk isn’t**, and that risk grows every month your fork drifts from upstream.
+
+### 3. Lost Standardization
+
+- Community support, examples, and documentation **assume a standard OpenIM deployment**.
+- Once you heavily modify the code, **you are on your own** for debugging, scaling, or performance tuning.
+- Even if you have all the time in the world, you **lose the benefit of collective knowledge**—your team becomes the sole experts on a fragile fork.
+
+### 4. Testing Explosion
+
+- Every change you make in the core multiplies testing complexity: functional, integration, load, concurrency, etc.
+- Even one minor feature might require **redoing tests for dozens of other services** because they may implicitly depend on the part you changed.
+- “Time is irrelevant” doesn’t scale when the **number of edge cases is astronomical**.
+
+### 5. Extensibility Exists for a Reason
+
+- OpenIM was built to allow **wrappers, webhooks, and middleware**. You can **achieve the same feature goals without touching the core**, preserving stability and control.
+- Modifying the core bypasses the safe extension points—so you’re building in a **fragile shortcut** that will eventually bite you when behavior changes, upstream fixes arrive, or new features are added.
+
+> **Bottom line:** Even if your team is okay with spending months reading and patching code, modifying OpenIM core **guarantees a long-term maintenance burden and increases risk exponentially**. Wrapping it gives you **all the flexibility you need** without touching the fragile parts, keeping your system predictable, auditable, and secure.
+
+---
+
 ## Summary
 
 | Do | Don’t |
