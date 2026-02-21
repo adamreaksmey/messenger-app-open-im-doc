@@ -880,7 +880,7 @@ We recommend **Option B (wrapper)**. Rationale:
 
 3. **Patching OpenIM is ongoing cost, not one-time.** You’re maintaining a fork. Every OpenIM upgrade requires re-applying or re-porting your change, re-testing, and re-deploying. That’s recurring effort. The wrapper stays in your codebase; OpenIM upgrades don’t touch it.
 
-4. **Failure and ownership.** With a patch, OpenIM’s message-fetch path depends on your backend or DB. If your DB is slow or down, OpenIM’s API can time out or fail. With the wrapper, *your* backend controls fallback (e.g. return messages without enriched media, or use cached data). Clear ownership: enrichment behavior lives in your service.
+4. **Failure and ownership.** With a patch, OpenIM’s message-fetch path depends on your backend or DB. If your DB is slow or down, OpenIM’s API can time out or fail and this will require us to implement some sort of fallback feature so we don't confuse the users. With the wrapper, *your* backend controls fallback (e.g. return messages without enriched media, or use cached data). Clear ownership: enrichment behavior lives in your service.
 
 5. **No separate media service.** Enrichment is “your backend → OpenIM via **gRPC** + your DB.” Your backend reads from your media table (or any other table) directly; no extra microservice required.
 
