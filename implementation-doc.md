@@ -41,7 +41,7 @@
 │  1. Verify DH session (HMAC) OR verify JWT                           │
 │  2. Resolve user's imToken from Redis                                │
 │  3. Inject `token` header into proxied request                       │
-│  4. Forward to OpenIM REST API                                       │
+│  4. Forward to OpenIM via gRPC                                       │
 │                                                                      │
 │  ⚠️  WebSocket is handled differently — see Section 3                │
 └────────────┬─────────────────────────────┬───────────────────────────┘
@@ -71,6 +71,7 @@
 - **No E2E encryption.** All messages pass through OpenIM in plaintext. The admin dashboard can read any message via OpenIM's admin APIs.
 - **OpenIM is the messaging engine.** Don't rebuild message routing, group logic, or WebSocket infrastructure — that's what OpenIM is for.
 - **Your backend handles webhooks.** OpenIM fires webhook callbacks on message events. Your backend listens for moderation, logging, and notification triggers.
+- **Service-to-service uses gRPC.** All communication between your backend and OpenIM (API calls, admin operations, token minting, proxied messaging) is done via gRPC. Client-to-backend remains REST/HTTP or WebSocket as appropriate.
 
 ---
 
@@ -120,8 +121,8 @@ curl http://localhost:10002/healthz
 | Port | Service |
 |---|---|
 | `10001` | WebSocket (client connections) |
-| `10002` | REST API (your backend calls this) |
-| `10008` | Admin API |
+| `10002` | gRPC API (your backend calls this for all OpenIM operations) |
+| `10008` | Admin API (gRPC; your backend uses this for admin operations) |
 
 ---
 
@@ -129,10 +130,10 @@ curl http://localhost:10002/healthz
 
 This is the most critical piece of the architecture. **Read this section carefully.**
 
-### How It Works (REST)
+### How It Works (REST client → backend → OpenIM via gRPC)
 
 ```
-Mobile Client                  Your Gateway              OpenIM REST
+Mobile Client                  Your Gateway              OpenIM (gRPC)
      │                              │                        │
      │  POST /im/msg/send_msg       │                        │
      │  Authorization: Session xxx  │                        │
@@ -140,11 +141,11 @@ Mobile Client                  Your Gateway              OpenIM REST
      │                              │ 1. Verify HMAC session │
      │                              │ 2. Get userID          │
      │                              │ 3. Redis GET imToken   │
-     │                              │ 4. Inject token header │
+     │                              │ 4. Inject token        │
+     │                              │ 5. Call OpenIM via gRPC│
      │                              │──────────────────────->│
-     │                              │  POST /msg/send_msg    │
-     │                              │  token: <imToken>      │
-     │                              │  operationID: <uuid>   │
+     │                              │  gRPC SendMsg          │
+     │                              │  (token, operationID)  │
      │<─────────────────────────────│<───────────────────────│
      │  200 OK                      │                        │
 ```
@@ -173,7 +174,7 @@ const imTokenPrefix = "im:token:"
 // OpenIMProxy creates a reverse proxy middleware that:
 // 1. Verifies the caller (DH session or JWT) — done by auth middleware before this
 // 2. Injects the imToken into the forwarded request from Redis
-// 3. Proxies to the OpenIM REST API
+// 3. Forwards the request to OpenIM via gRPC (service-to-service)
 func OpenIMProxy(rdb *redis.Client, openIMBaseURL string) gin.HandlerFunc {
     target, _ := url.Parse(openIMBaseURL)
     proxy := httputil.NewSingleHostReverseProxy(target)
@@ -811,7 +812,7 @@ func OpenIMWebhook(c *gin.Context) {
 
 ### 6.1 Direct Messages & Group Chats
 
-Handled entirely by the OpenIM SDK on the mobile client. Your gateway proxies SDK REST calls transparently — no custom message routing needed.
+Handled entirely by the OpenIM SDK on the mobile client. Your gateway receives REST from the client and forwards to OpenIM via **gRPC** — no custom message routing needed.
 
 ```
 Client SDK → POST /im/msg/send_msg  (DH session headers)
@@ -869,11 +870,11 @@ func SearchGIFs(c *gin.Context) {
 When you need to **build on top** of OpenIM — for example, enriching messages with data from **your own DB** (e.g. a media table keyed by `media_id`, so the client gets full media URLs and metadata) — you have two options:
 
 - **Option A:** Add the feature **inside OpenIM’s code** (fork/patch: OpenIM calls your backend or DB to enrich before returning).
-- **Option B:** **Wrapper:** client calls **your** backend; your backend calls OpenIM, then enriches using **your DB** (no separate media service — straight DB access), and returns the combined result.
+- **Option B:** **Wrapper:** client calls **your** backend; your backend calls OpenIM **via gRPC**, then enriches using **your DB** (no separate media service — straight DB access), and returns the combined result.
 
 We recommend **Option B (wrapper)**. Rationale:
 
-1. **Latency is small and bounded.** The wrapper adds one hop (client → your backend) and one DB read (your backend → your DB). With backend and DB in the same region, that’s typically tens of ms. For “fetch message list” or similar, that’s acceptable. You can optimize (caching, indexing) and still keep the wrapper.
+1. **Latency is small and bounded.** The wrapper adds one hop (client → your backend) and one DB read (your backend → your DB). Your backend talks to OpenIM over **gRPC** (efficient, same-region). With backend and DB in the same region, that’s typically tens of ms. For “fetch message list” or similar, that’s acceptable. You can optimize (caching, indexing) and still keep the wrapper.
 
 2. **Patching OpenIM doesn’t remove enrichment latency; it only moves it.** To attach your data (e.g. media URLs), *some* component must read from your DB. With the wrapper, your backend does it. With a patch, OpenIM would call your backend or DB. The RTT to your DB (or to a backend that talks to your DB) is similar either way. So Option A doesn’t eliminate latency — it just puts the dependency inside OpenIM’s code path.
 
@@ -881,9 +882,9 @@ We recommend **Option B (wrapper)**. Rationale:
 
 4. **Failure and ownership.** With a patch, OpenIM’s message-fetch path depends on your backend or DB. If your DB is slow or down, OpenIM’s API can time out or fail. With the wrapper, *your* backend controls fallback (e.g. return messages without enriched media, or use cached data). Clear ownership: enrichment behavior lives in your service.
 
-5. **No separate media service.** Enrichment is “your backend → OpenIM API + your DB.” Your backend reads from your media table (or any other table) directly; no extra microservice required.
+5. **No separate media service.** Enrichment is “your backend → OpenIM via **gRPC** + your DB.” Your backend reads from your media table (or any other table) directly; no extra microservice required.
 
-**Summary:** For anything that needs your own data (message enrichment with media from your DB, custom admin queries, etc.), keep it in **your backend**: call OpenIM, then enrich from your DB and return. Avoid patching OpenIM so you don’t take on long-term fork maintenance and coupling.
+**Summary:** For anything that needs your own data (message enrichment with media from your DB, custom admin queries, etc.), keep it in **your backend**: call OpenIM **via gRPC**, then enrich from your DB and return. Avoid patching OpenIM so you don’t take on long-term fork maintenance and coupling.
 
 ---
 
@@ -891,7 +892,7 @@ We recommend **Option B (wrapper)**. Rationale:
 
 ### 7.1 Overview
 
-The admin dashboard is a React web app that talks to your Go backend using JWT. Your backend calls OpenIM's admin API. Admins never communicate with OpenIM directly.
+The admin dashboard is a React web app that talks to your Go backend using JWT. Your backend calls OpenIM's admin API **via gRPC**. Admins never communicate with OpenIM directly.
 
 ### 7.2 Admin Handlers
 
@@ -1120,7 +1121,7 @@ PORT=8080
 # Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/chatapp
 
-# OpenIM
+# OpenIM (backend talks to OpenIM via gRPC at this address)
 OPENIM_API_URL=http://openim-server:10002
 OPENIM_SECRET=your-openim-secret-here
 OPENIM_WEBHOOK_SECRET=your-webhook-secret
@@ -1188,7 +1189,7 @@ volumes:
 | **Gateway & Middleware** | Backend lead | DH session verification, JWT middleware, Redis imToken injection, reverse proxy setup |
 | **Auth Handlers** | Backend | Device registration, OTP flow, OpenIM user creation, token minting |
 | **Admin Handlers** | Backend | All `/api/v1/admin/*` routes — users, messages, groups, stickers |
-| **OpenIM Client** | Backend | `openim.Client` wrapper, admin token caching, all OpenIM API calls |
+| **OpenIM Client** | Backend | `openim.Client` wrapper (gRPC), admin token caching, all OpenIM API calls |
 | **OpenIM Infra** | DevOps / Backend | Docker Compose, Nginx config, environment setup, MinIO buckets |
 | **Mobile (iOS/Android)** | Mobile team | OpenIM SDK integration, `RegistrationClient` wiring, WebSocket connection with imToken, push token registration |
 | **Admin Dashboard** | Frontend | React app, JWT auth, all admin UI sections |
@@ -1206,24 +1207,26 @@ volumes:
 
 ---
 
-## Appendix — OpenIM REST API Reference
+## Appendix — OpenIM API Reference (gRPC)
 
-| Action | Method | Endpoint |
-|---|---|---|
-| Register user | POST | `/user/user_register` |
-| Get user info | POST | `/user/get_users_info` |
-| Mint user token | POST | `/auth/user_token` |
-| Force logout | POST | `/auth/force_logout` |
-| Send message (server-side) | POST | `/msg/send_msg` |
-| Get messages by seq | POST | `/msg/get_conversation_msgs_by_seq` |
-| Delete messages | POST | `/msg/del_msgs` |
-| Create group | POST | `/group/create_group` |
-| Get all groups | POST | `/group/get_groups` |
-| Dismiss group | POST | `/group/dismiss_group` |
-| Remove group member | POST | `/group/kick_group` |
+Your backend communicates with OpenIM **via gRPC** for all service-to-service calls. The following operations map to OpenIM gRPC services:
 
-> ⚠️ **Reminder:** Every OpenIM API call requires a unique `operationID` header per request. The gateway middleware sets this automatically for all proxied mobile requests. For direct calls from your admin handlers, always use the `openimClient.post()` helper which generates it internally.
+| Action | gRPC service / method |
+|--|--|
+| Register user | `user.user_register` |
+| Get user info | `user.get_users_info` |
+| Mint user token | `auth.user_token` |
+| Force logout | `auth.force_logout` |
+| Send message (server-side) | `msg.send_msg` |
+| Get messages by seq | `msg.get_conversation_msgs_by_seq` |
+| Delete messages | `msg.del_msgs` |
+| Create group | `group.create_group` |
+| Get all groups | `group.get_groups` |
+| Dismiss group | `group.dismiss_group` |
+| Remove group member | `group.kick_group` |
 
-Full API docs: [https://docs.openim.io/restapi](https://docs.openim.io/restapi)
+> ⚠️ **Reminder:** Every OpenIM gRPC call requires a unique `operationID` in the request context. The gateway and `openim.Client` wrapper set this automatically. For direct calls from your admin handlers, use the OpenIM gRPC client and set `operationID` in the metadata.
+
+REST API docs (for reference; backend uses gRPC): [https://docs.openim.io/restapi](https://docs.openim.io/restapi)
 OpenIM Docker repo: [https://github.com/openimsdk/openim-docker](https://github.com/openimsdk/openim-docker)
 OpenIM SDK (React Native): [https://github.com/openimsdk/open-im-sdk-reactnative](https://github.com/openimsdk/open-im-sdk-reactnative)
