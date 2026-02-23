@@ -1187,13 +1187,12 @@ volumes:
 | Area | Who | Key Tasks |
 |---|---|---|
 | **Gateway & Middleware** | Backend lead | DH session verification, JWT middleware, Redis imToken injection, reverse proxy setup |
-| **Auth Handlers** | Backend | Device registration, OTP flow, OpenIM user creation, token minting |
-| **Admin Handlers** | Backend | All `/api/v1/admin/*` routes — users, messages, groups, stickers |
+| **Auth Handlers** | Backend team | Device registration, OTP flow, OpenIM user creation, token minting |
+| **Admin Handlers** | Backend team | All `/api/v1/admin/*` routes — users, messages, groups, stickers |
 | **OpenIM Client** | Backend | `openim.Client` wrapper (gRPC), admin token caching, all OpenIM API calls |
 | **OpenIM Infra** | DevOps / Backend | Docker Compose, Nginx config, environment setup, MinIO buckets |
 | **Mobile (iOS/Android)** | Mobile team | OpenIM SDK integration, `RegistrationClient` wiring, WebSocket connection with imToken, push token registration |
 | **Admin Dashboard** | Frontend | React app, JWT auth, all admin UI sections |
-| **Media & Stickers** | Backend + Frontend | MinIO upload handler, sticker pack CRUD, GIF proxy |
 
 ### Critical Path (Do These First)
 
@@ -1206,7 +1205,7 @@ volumes:
 7. Only then: build admin routes, stickers, GIFs, and everything else on top
 
 ---
-
+◊◊
 ## Appendix — OpenIM API Reference (gRPC)
 
 Your backend communicates with OpenIM **via gRPC** for all service-to-service calls. The following operations map to OpenIM gRPC services:
