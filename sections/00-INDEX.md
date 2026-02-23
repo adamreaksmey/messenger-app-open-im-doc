@@ -14,6 +14,7 @@ This file is the entry point for the **migration plan** sections. It lists docum
 6. **[06-admin-and-moderation.md](./06-admin-and-moderation.md)** — Admin and moderation: current routes vs OpenIM admin API and webhooks.
 7. **[07-data-and-storage.md](./07-data-and-storage.md)** — Data ownership: what OpenIM stores vs what stays in our DB/Redis.
 8. **[08-migration-phases.md](./08-migration-phases.md)** — Phased plan and dependencies for executing the migration.
+9. **[09-admin-auth-and-openim-admin-plan.md](./09-admin-auth-and-openim-admin-plan.md)** — Security plan for admin auth, verification chain, RBAC, and backend-only OpenIM admin calls.
 
 The root **[../implementation-doc.md](../implementation-doc.md)** is the **target design** (how to build the app on OpenIM); the section docs above map **current → target** and call out migration steps.
 
@@ -32,6 +33,7 @@ The root **[../implementation-doc.md](../implementation-doc.md)** is the **targe
 | 7 | Decommission or repurpose: messenger-websocket (realtime), messenger-chat-service message pipeline (RabbitMQ → Redis → WS) | 03, 05, 08 |
 | 8 | Admin: call OpenIM admin API from your backend; optional webhooks for moderation | 06-admin-and-moderation |
 | 9 | Presence/push: use OpenIM config or keep minimal custom layer | 05-presence-and-notifications |
+| 10 | Admin security hardening: JWT revocation, RBAC, MFA, OpenIM admin token handling | 09-admin-auth-and-openim-admin-plan.md |
 
 ---
 
@@ -44,4 +46,5 @@ The root **[../implementation-doc.md](../implementation-doc.md)** is the **targe
 - **Messages:** implementation-doc §6; sections 03, 07.
 - **Groups:** implementation-doc §6, §7; sections 04, 06.
 - **Admin:** implementation-doc §7; section 06.
+- **Admin security and verification chain:** section 09.
 - **Data stores:** implementation-doc §2, §8; section 07.

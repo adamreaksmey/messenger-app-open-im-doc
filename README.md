@@ -19,6 +19,7 @@ This directory contains the **implementation plan** for moving the current chat 
 | **[sections/06-admin-and-moderation.md](./sections/06-admin-and-moderation.md)** | Current admin routes vs OpenIM admin API and webhooks. |
 | **[sections/07-data-and-storage.md](./sections/07-data-and-storage.md)** | Current data stores (Mongo, Postgres, Redis) vs what OpenIM owns and what we keep. |
 | **[sections/08-migration-phases.md](./sections/08-migration-phases.md)** | Phased migration plan: order of work and dependencies. |
+| **[sections/09-admin-auth-and-openim-admin-plan.md](./sections/09-admin-auth-and-openim-admin-plan.md)** | Security implementation plan for admin dashboard -> admin service -> OpenIM admin APIs (JWT, RBAC, MFA, token handling, network controls). |
 | **[diagram/current-flow.md](./diagram/current-flow.md)** | Mermaid diagrams: current component flow, message send sequence, presence & WebSocket. |
 | **[diagram/openim-integration-flow.md](./diagram/openim-integration-flow.md)** | Mermaid diagrams: OpenIM component flow, login/imToken, message send, admin & webhooks. |
 | **[wrapper-vs-openim/README.md](./wrapper-vs-openim/README.md)** | What to implement **inside OpenIM** vs what to keep **as a wrapper** (gateway, auth, profiles, webhooks). Gateway stays separate. |
@@ -31,8 +32,9 @@ This directory contains the **implementation plan** for moving the current chat 
 1. **Architecture decision first:** Read [build-on-top-strategy.md](./build-on-top-strategy.md) for the argument and implementation stance: build on OpenIM, do not modify OpenIM core.
 2. **Target design:** Read [implementation-doc.md](./implementation-doc.md) to understand the desired OpenIM-based architecture.
 3. **Current state:** Read [sections/01-current-architecture.md](./sections/01-current-architecture.md) to see how the app works today.
-4. **Per concern:** Use the section files under `sections/` to see current → OpenIM mapping and implementation notes.
-5. **Execution order:** Follow [sections/00-INDEX.md](./sections/00-INDEX.md) and [sections/08-migration-phases.md](./sections/08-migration-phases.md) for the recommended migration path.
+4. **Admin security path:** Read [sections/09-admin-auth-and-openim-admin-plan.md](./sections/09-admin-auth-and-openim-admin-plan.md) for admin verification, RBAC, and OpenIM admin integration controls.
+5. **Per concern:** Use the section files under `sections/` to see current → OpenIM mapping and implementation notes.
+6. **Execution order:** Follow [sections/00-INDEX.md](./sections/00-INDEX.md) and [sections/08-migration-phases.md](./sections/08-migration-phases.md) for the recommended migration path.
 
 ---
 

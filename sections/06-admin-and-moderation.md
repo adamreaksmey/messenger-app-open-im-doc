@@ -2,6 +2,8 @@
 
 This section maps **current** admin and moderation behavior to the **OpenIM-based** design so we can keep admin capabilities without rebuilding everything from scratch.
 
+For the detailed security implementation (JWT verification chain, session revocation, RBAC, MFA, backend-only OpenIM admin credentials, and network hardening), see [09-admin-auth-and-openim-admin-plan.md](./09-admin-auth-and-openim-admin-plan.md).
+
 ---
 
 ## Current Admin (Summary)
